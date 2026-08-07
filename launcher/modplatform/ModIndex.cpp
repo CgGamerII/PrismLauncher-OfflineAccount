@@ -25,11 +25,10 @@
 
 namespace ModPlatform {
 
-static const QMap<QString, IndexedVersionType> s_indexed_version_type_names = {
-    { "release", IndexedVersionType::Release },
-    { "beta", IndexedVersionType::Beta },
-    { "alpha", IndexedVersionType::Alpha }
-};
+ModLoaderType operator|(ModLoaderType lhs, ModLoaderType rhs)
+{
+    return static_cast<ModLoaderType>(static_cast<std::uint16_t>(lhs) | static_cast<std::uint16_t>(rhs));
+}
 
 static const QList<ModLoaderType> loaderList = { NeoForge, Forge, Cauldron,     LiteLoader, Quilt, Fabric,
                                                  Babric,   BTA,   LegacyFabric, Ornithe,    Rift };
@@ -43,14 +42,6 @@ QList<ModLoaderType> modLoaderTypesToList(ModLoaderTypes flags)
         }
     }
     return flagList;
-}
-
-QString indexedVersionTypeToString(IndexedVersionType type) {
-    return s_indexed_version_type_names.key(type, "unknown");
-}
-
-IndexedVersionType indexedVersionTypeFromString(const QString& type) {
-    return s_indexed_version_type_names.value(type, IndexedVersionType::Unknown);
 }
 
 const char* ProviderCapabilities::name(ResourceProvider p)
@@ -153,29 +144,4 @@ auto getModLoaderFromString(QString type) -> ModLoaderType
     return {};
 }
 
-QString SideUtils::toString(Side side)
-{
-    switch (side) {
-        case Side::ClientSide:
-            return "client";
-        case Side::ServerSide:
-            return "server";
-        case Side::UniversalSide:
-            return "both";
-        case Side::NoSide:
-            break;
-    }
-    return {};
-}
-
-Side SideUtils::fromString(QString side)
-{
-    if (side == "client")
-        return Side::ClientSide;
-    if (side == "server")
-        return Side::ServerSide;
-    if (side == "both")
-        return Side::UniversalSide;
-    return Side::UniversalSide;
-}
 }  // namespace ModPlatform

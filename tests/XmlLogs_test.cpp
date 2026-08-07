@@ -38,6 +38,18 @@ class XmlLogParseTest : public QObject {
 
    private slots:
 
+    void guessLevel_timestampFormats()
+    {
+        QCOMPARE(LogParser::guessLevel("[21:16:07] [Server thread/WARN]: short timestamp", MessageLevel::Unknown), MessageLevel::Warning);
+        QCOMPARE(LogParser::guessLevel("[23Jul2026 18:12:07.877] [main/WARN] [Sodium-Workarounds/]: date and millis timestamp",
+                                       MessageLevel::Unknown),
+                 MessageLevel::Warning);
+        QCOMPARE(LogParser::guessLevel(
+                     "[25Jul2026 14:10:58.723] [main/ERROR] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: error",
+                     MessageLevel::Unknown),
+                 MessageLevel::Error);
+    }
+
     void parseXml_data()
     {
         QString source = QFINDTESTDATA("testdata/TestLogs");
@@ -50,7 +62,7 @@ class XmlLogParseTest : public QObject {
         QList<MessageLevel> shortTextLevels;
         shortTextLevels.reserve(24);
         std::transform(shortTextLevels_s.cbegin(), shortTextLevels_s.cend(), std::back_inserter(shortTextLevels),
-                       [](const QString& line) { return messageLevelFromName(line.trimmed()); });
+                       [](const QString& line) { return MessageLevel::fromName(line.trimmed()); });
 
         QString longXml = QString::fromUtf8(FS::read(FS::PathCombine(source, "TerraFirmaGreg-Modern-forge.xml.log")));
         QString longText = QString::fromUtf8(FS::read(FS::PathCombine(source, "TerraFirmaGreg-Modern-forge.text.log")));
@@ -62,11 +74,11 @@ class XmlLogParseTest : public QObject {
         QList<MessageLevel> longTextLevelsPlain;
         longTextLevelsPlain.reserve(974);
         std::transform(longTextLevels_s.cbegin(), longTextLevels_s.cend(), std::back_inserter(longTextLevelsPlain),
-                       [](const QString& line) { return messageLevelFromName(line.trimmed()); });
+                       [](const QString& line) { return MessageLevel::fromName(line.trimmed()); });
         QList<MessageLevel> longTextLevelsXml;
         longTextLevelsXml.reserve(896);
         std::transform(longTextLevelsXml_s.cbegin(), longTextLevelsXml_s.cend(), std::back_inserter(longTextLevelsXml),
-                       [](const QString& line) { return messageLevelFromName(line.trimmed()); });
+                       [](const QString& line) { return MessageLevel::fromName(line.trimmed()); });
 
         QTest::addColumn<QString>("log");
         QTest::addColumn<int>("num_entries");

@@ -48,12 +48,7 @@
 #include "Resource.h"
 
 class Mod : public Resource {
-    Q_OBJECT
    public:
-    using Ptr = shared_qobject_ptr<Mod>;
-    using WeakPtr = QPointer<Mod>;
-
-    Mod() = default;
     Mod(const QFileInfo& file);
     Mod(QString file_path) : Mod(QFileInfo(file_path)) {}
 
@@ -68,8 +63,16 @@ class Mod : public Resource {
     auto issueTracker() const -> QString;
     auto side() const -> QString;
     auto loaders() const -> QString;
-    auto mcVersions() const -> QString;
+    auto mcVersions() const -> QStringList;
+    auto mcVersionsString() const -> QString;
     auto releaseType() const -> QString;
+    QStringList dependencies() const;
+
+    int requiredByCount() const;
+    int requiresCount() const;
+
+    void setRequiredByCount(int value);
+    void setRequiresCount(int value);
 
     /** Get the intneral path to the mod's icon file*/
     QString iconPath() const { return m_local_details.icon_file; }
@@ -83,7 +86,7 @@ class Mod : public Resource {
     bool valid() const override;
 
     [[nodiscard]] int compare(const Resource& other, SortType type) const override;
-    [[nodiscard]] bool applyFilter(QRegularExpression filter) const override;
+    [[nodiscard]] bool applyFilter(const QRegularExpression& filter) const override;
 
     // Delete all the files of this mod
     auto destroy(QDir& index_dir, bool preserve_metadata = false, bool attempt_trash = true) -> bool;
@@ -102,4 +105,7 @@ class Mod : public Resource {
         bool wasEverUsed = false;
         bool wasReadAttempt = false;
     } mutable m_packImageCacheKey;
+
+    int m_requiredByCount = 0;
+    int m_requiresCount = 0;
 };
