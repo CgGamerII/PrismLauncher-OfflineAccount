@@ -85,7 +85,7 @@
 #include <launch/LaunchTask.h>
 #include <minecraft/MinecraftInstance.h>
 #include <minecraft/auth/AccountList.h>
-#include <net/ApiDownload.h>
+#include <net/ApiRequest.h>
 #include <net/NetJob.h>
 #include <news/NewsChecker.h>
 #include <tools/BaseProfiler.h>
@@ -338,11 +338,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     {
         // set the cat action priority here so you can still see the action in qt designer
         ui->actionCAT->setPriority(QAction::LowPriority);
-        bool cat_enable = APPLICATION->settings()->get("TheCat").toBool();
-        ui->actionCAT->setChecked(cat_enable);
+        updateCatState();
         connect(ui->actionCAT, &QAction::toggled, this, &MainWindow::onCatToggled);
         connect(APPLICATION, &Application::currentCatChanged, this, &MainWindow::onCatChanged);
-        setCatBackground(cat_enable);
     }
 
     // Togglable status bar
@@ -854,6 +852,21 @@ void MainWindow::setCatBackground(bool enabled)
     view->viewport()->repaint();
 }
 
+void MainWindow::updateCatState()
+{
+    SettingsObject* settings = APPLICATION->settings();
+    const bool catEnabled = settings->get("EnableCat").toBool();
+    bool catVisible = settings->get("TheCat").toBool();
+    if (!catEnabled && catVisible) {
+        settings->set("TheCat", false);
+        catVisible = false;
+    }
+
+    ui->actionCAT->setVisible(catEnabled);
+    ui->actionCAT->setChecked(catVisible);
+    setCatBackground(catVisible);
+}
+
 void MainWindow::runModalTask(Task* task)
 {
     connect(task, &Task::failed, this,
@@ -1089,7 +1102,7 @@ void MainWindow::processURLs(QList<QUrl> urls)
             auto entry = APPLICATION->metacache()->resolveEntry("general", path);
             entry->setStale(true);
             auto dl_job = unique_qobject_ptr<NetJob>(new NetJob(tr("Modpack download"), APPLICATION->network()));
-            dl_job->addNetAction(Net::ApiDownload::makeCached(dl_url, entry));
+            dl_job->addNetAction(Net::ApiRequest::makeCached(dl_url, entry));
             auto archivePath = entry->getFullPath();
 
             bool dl_success = false;
@@ -1370,6 +1383,7 @@ void MainWindow::globalSettingsClosed()
     updateLaunchButton();
     updateThemeMenu();
     updateStatusCenter();
+    updateCatState();
     // This needs to be done to prevent UI elements disappearing in the event the config is changed
     // but Prism Launcher exits abnormally, causing the window state to never be saved:
     APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
@@ -1595,6 +1609,17 @@ void MainWindow::instanceActivated(QModelIndex index)
     if (!inst)
         return;
 
+    if (APPLICATION->settings()->get("EditInstanceOnDoubleClick").toBool()) {
+        if (inst->canEdit()) {
+            APPLICATION->showInstanceWindow(inst);
+        } else {
+            CustomMessageBox::selectable(
+                this, tr("Instance not editable"),
+                tr("This instance is not editable. It may be broken, invalid, or too old. Check logs for details."), QMessageBox::Critical)
+                ->show();
+        }
+        return;
+    }
     APPLICATION->launch(inst);
 }
 
@@ -1744,8 +1769,7 @@ void MainWindow::checkInstancePathForProblems()
 void MainWindow::updateStatusCenter()
 {
     m_statusCenter->setVisible(APPLICATION->settings()->get("ShowGlobalGameTime").toBool());
-
-    int64_t timePlayed = APPLICATION->instances()->getTotalPlayTime();
+    int64_t timePlayed = APPLICATION->playtimeSettings()->get("TotalPlayTime").toLongLong();
     if (timePlayed > 0) {
         m_statusCenter->setText(
             tr("Total playtime: %1")
